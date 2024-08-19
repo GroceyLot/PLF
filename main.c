@@ -159,7 +159,7 @@ unsigned __stdcall LuaUpdateThread(void *param)
         double dt = 0.0;
 
         // If this is not the first frame, calculate dt
-        static DWORD lastTime = startTime;
+        DWORD lastTime = startTime;
         if (lastTime != startTime)
         {
             dt = (double)(startTime - lastTime) / 1000.0; // Convert milliseconds to seconds
