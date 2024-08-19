@@ -90,5 +90,5 @@ function close() end
 ### Extra:
 
 #### The color works in a custom format, and here is a sheet showing all of the possible colors:
-<sub> 0 = transparent </sub>
+<sub> 0 = transparent </sub> <br>
 ![colors](/Colors.png)
