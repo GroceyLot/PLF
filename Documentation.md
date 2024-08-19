@@ -4,8 +4,15 @@
 
 ## To install:
 
-1. Get the rom generator from (imagRom)[https://github.com/GroceyLot/ImageROM/releases/tag/Release]
+1. Get the rom generator from [imagRom](https://github.com/GroceyLot/ImageROM/releases/tag/Release)
 2. Install plf via the release or the source
+
+## Usage:
+
+plf <script_path> <rom_path>
+imagRom <action : (encode, decode)>
+  encode - <images_folder_path> <rom_path>
+  decode - <rom_path> <images_folder_path>
 
 ## Documentation:
 
