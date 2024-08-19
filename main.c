@@ -140,10 +140,11 @@ void SetupBuffer(HDC hdc, int width, int height)
     SelectObject(hdcMem, hBitmap);
 }
 
-void UpdatePixelsFromLua()
+void UpdatePixelsFromLua(double dt)
 {
     lua_getglobal(L, "update");
-    if (lua_pcall(L, 0, 0, 0) != LUA_OK)
+    lua_pushnumber(L, dt); // Push dt onto the Lua stack
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) // Pass 1 argument (dt) to the update function
     {
         MessageBox(NULL, lua_tostring(L, -1), "Error in Update", MB_OK);
     }
@@ -155,7 +156,17 @@ unsigned __stdcall LuaUpdateThread(void *param)
     {
         DWORD startTime = GetTickCount();
 
-        UpdatePixelsFromLua();
+        double dt = 0.0;
+
+        // If this is not the first frame, calculate dt
+        static DWORD lastTime = startTime;
+        if (lastTime != startTime)
+        {
+            dt = (double)(startTime - lastTime) / 1000.0; // Convert milliseconds to seconds
+        }
+        lastTime = startTime;
+
+        UpdatePixelsFromLua(dt); // Pass dt to the Lua update function
 
         DWORD elapsedTime = GetTickCount() - startTime;
         DWORD sleepTime = ((DWORD)updateInterval > elapsedTime) ? (updateInterval - elapsedTime) : 0;
