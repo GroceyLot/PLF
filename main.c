@@ -24,7 +24,7 @@ const char *romPathGlobal = NULL;
 
 void InitializeLua(const char *scriptPath);
 void SetupBuffer(HDC hdc, int width, int height);
-void UpdatePixelsFromLua();
+void UpdatePixelsFromLua(double dt);
 unsigned __stdcall LuaUpdateThread(void *param);
 void DrawBuffer(HWND hwnd);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -142,37 +142,34 @@ void SetupBuffer(HDC hdc, int width, int height)
 
 void UpdatePixelsFromLua(double dt)
 {
-    lua_getglobal(L, "update");
-    lua_pushnumber(L, dt); // Push dt onto the Lua stack
-    if (lua_pcall(L, 1, 0, 0) != LUA_OK) // Pass 1 argument (dt) to the update function
+    lua_getglobal(L, "update"); // Get the "update" function from Lua
+    lua_pushnumber(L, dt);      // Push dt onto the Lua stack
+
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) // Call the update function with 1 argument
     {
         MessageBox(NULL, lua_tostring(L, -1), "Error in Update", MB_OK);
+        lua_pop(L, 1); // Remove the error message from the stack
     }
 }
 
 unsigned __stdcall LuaUpdateThread(void *param)
 {
+    DWORD lastTime = GetTickCount(); // Initialize lastTime
+
     while (running)
     {
         DWORD startTime = GetTickCount();
-
-        double dt = 0.0;
-
-        // If this is not the first frame, calculate dt
-        DWORD lastTime = startTime;
-        if (lastTime != startTime)
-        {
-            dt = (double)(startTime - lastTime) / 1000.0; // Convert milliseconds to seconds
-        }
-        lastTime = startTime;
+        double dt = (double)(startTime - lastTime) / 1000.0; // Calculate delta time in seconds
 
         UpdatePixelsFromLua(dt); // Pass dt to the Lua update function
 
         DWORD elapsedTime = GetTickCount() - startTime;
         DWORD sleepTime = ((DWORD)updateInterval > elapsedTime) ? (updateInterval - elapsedTime) : 0;
 
-        InvalidateRect(hwndGlobal, NULL, FALSE);
+        InvalidateRect(hwndGlobal, NULL, FALSE); // Request a window repaint
         Sleep(sleepTime);
+
+        lastTime = startTime; // Update lastTime for the next iteration
     }
     return 0;
 }
