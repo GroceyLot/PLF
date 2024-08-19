@@ -81,7 +81,7 @@ title = "Window title"
 dt = 16 -- Target update ms
 
 function load() end
-function update() end
+function update(dt) end -- Dt in seconds
 function down(button) end
 function up(button) end
 function close() end
