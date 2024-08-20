@@ -35,6 +35,8 @@ int texture_fromShader(lua_State *L);
 int texture_fromRom(lua_State *L);
 int drawing_shader(lua_State *L);
 int drawing_rect(lua_State *L);
+int drawing_circle(lua_State *L);
+int drawing_line(lua_State *L);
 int mouse_position(lua_State *L);
 int mouse_down(lua_State *L);
 int mouse_center(lua_State *L);
@@ -68,6 +70,8 @@ void InitializeLua(const char *scriptPath)
     luaL_Reg drawingLib[] = {
         {"shader", drawing_shader},
         {"rect", drawing_rect},
+        {"circle", drawing_circle},
+        {"line", drawing_line},
         {NULL, NULL}};
 
     luaL_newlib(L, drawingLib);
@@ -189,8 +193,17 @@ void DrawBuffer(HWND hwnd)
 {
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(hwnd, &ps);
+
     RECT rect;
     GetClientRect(hwnd, &rect);
+
+    HDC hdcBuffer = CreateCompatibleDC(hdc); // Create a memory DC
+    HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+    HBITMAP hbmOld = (HBITMAP)SelectObject(hdcBuffer, hbmBuffer); // Select the buffer bitmap
+
+    // Fill the window with black color
+    HBRUSH blackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    FillRect(hdcBuffer, &rect, blackBrush);
 
     // Calculate the aspect ratio of the buffer and the window
     float bufferAspectRatio = (float)bufferWidth / bufferHeight;
@@ -201,26 +214,26 @@ void DrawBuffer(HWND hwnd)
 
     if (windowAspectRatio > bufferAspectRatio)
     {
-        // Window is wider than buffer aspect ratio, so we add black bars on the sides
         drawHeight = rect.bottom - rect.top;
         drawWidth = (int)(drawHeight * bufferAspectRatio);
         offsetX = (rect.right - rect.left - drawWidth) / 2;
     }
     else
     {
-        // Window is taller than buffer aspect ratio, so we add black bars on the top and bottom
         drawWidth = rect.right - rect.left;
         drawHeight = (int)(drawWidth / bufferAspectRatio);
         offsetY = (rect.bottom - rect.top - drawHeight) / 2;
     }
 
-    // Fill the window with black color
-    HBRUSH blackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    FillRect(hdc, &rect, blackBrush);
+    SetStretchBltMode(hdcBuffer, STRETCH_ANDSCANS);
+    StretchBlt(hdcBuffer, offsetX, offsetY, drawWidth, drawHeight, hdcMem, 0, 0, bufferWidth, bufferHeight, SRCCOPY);
 
-    // Draw the buffer centered with black bars on the sides or top/bottom
-    SetStretchBltMode(hdc, STRETCH_ANDSCANS);
-    StretchBlt(hdc, offsetX, offsetY, drawWidth, drawHeight, hdcMem, 0, 0, bufferWidth, bufferHeight, SRCCOPY);
+    // Copy the memory buffer to the actual window
+    BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcBuffer, 0, 0, SRCCOPY);
+
+    SelectObject(hdcBuffer, hbmOld); // Restore the old bitmap
+    DeleteObject(hbmBuffer);         // Clean up the buffer bitmap
+    DeleteDC(hdcBuffer);             // Delete the memory DC
 
     EndPaint(hwnd, &ps);
 }
@@ -928,6 +941,44 @@ int util_distance(lua_State *L)
     return 1;
 }
 
+int drawing_circle(lua_State *L)
+{
+    int centerX = luaL_checkinteger(L, 1);
+    int centerY = luaL_checkinteger(L, 2);
+    int radius = luaL_checkinteger(L, 3);
+    int color = luaL_checkinteger(L, 4);
+
+    int encodedValue = color - 1;
+    int rIndex = encodedValue / 64;
+    int gIndex = (encodedValue % 64) / 8;
+    int bIndex = encodedValue % 8;
+
+    BYTE r = rIndex * 36;
+    BYTE g = gIndex * 36;
+    BYTE b = bIndex * 36;
+
+    for (int y = -radius; y <= radius; y++)
+    {
+        for (int x = -radius; x <= radius; x++)
+        {
+            if (x * x + y * y <= radius * radius)
+            {
+                int destX = centerX + x;
+                int destY = centerY + y;
+                if (destX >= 0 && destX < bufferWidth && destY >= 0 && destY < bufferHeight)
+                {
+                    int index = (destY * bufferWidth + destX) * 3;
+                    bitmapData[index] = b;
+                    bitmapData[index + 1] = g;
+                    bitmapData[index + 2] = r;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 // Generate a random number within a range or 0-1 if no arguments
 int util_random(lua_State *L)
 {
@@ -1058,6 +1109,91 @@ int util_intersect(lua_State *L)
         lua_pushnumber(L, 0); // y2 movement
         return 4;             // Return 4 values (all zeros)
     }
+}
+
+int drawing_line(lua_State *L)
+{
+    int x1 = luaL_checkinteger(L, 1);
+    int y1 = luaL_checkinteger(L, 2);
+    int x2 = luaL_checkinteger(L, 3);
+    int y2 = luaL_checkinteger(L, 4);
+    int color = luaL_checkinteger(L, 5);
+
+    int encodedValue = color - 1;
+    int rIndex = encodedValue / 64;
+    int gIndex = (encodedValue % 64) / 8;
+    int bIndex = encodedValue % 8;
+
+    BYTE r = rIndex * 36;
+    BYTE g = gIndex * 36;
+    BYTE b = bIndex * 36;
+
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = x1 < x2 ? 1 : -1;
+    int sy = y1 < y2 ? 1 : -1;
+    int err = (dx > dy ? dx : -dy) / 2;
+    int e2;
+
+    while (true)
+    {
+        if (x1 >= 0 && x1 < bufferWidth && y1 >= 0 && y1 < bufferHeight)
+        {
+            int index = (y1 * bufferWidth + x1) * 3;
+            bitmapData[index] = b;
+            bitmapData[index + 1] = g;
+            bitmapData[index + 2] = r;
+        }
+        if (x1 == x2 && y1 == y2)
+            break;
+        e2 = err;
+        if (e2 > -dx)
+        {
+            err -= dy;
+            x1 += sx;
+        }
+        if (e2 < dy)
+        {
+            err += dx;
+            y1 += sy;
+        }
+    }
+
+    return 0;
+}
+
+int drawing_pixel(lua_State *L)
+{
+    // Retrieve the parameters from the Lua stack
+    int x = luaL_checkinteger(L, 1);
+    int y = luaL_checkinteger(L, 2);
+    int color = luaL_checkinteger(L, 3);
+
+    // Ensure the coordinates are within the buffer bounds
+    if (x < 0 || x >= bufferWidth || y < 0 || y >= bufferHeight)
+    {
+        return 0;
+    }
+
+    // Decode the color value
+    int encodedValue = color - 1;
+    int rIndex = encodedValue / 64;
+    int gIndex = (encodedValue % 64) / 8;
+    int bIndex = encodedValue % 8;
+
+    BYTE r = rIndex * 36;
+    BYTE g = gIndex * 36;
+    BYTE b = bIndex * 36;
+
+    // Calculate the index in the bitmap data array
+    int index = (y * bufferWidth + x) * 3;
+
+    // Set the pixel's color in the bitmap data array
+    bitmapData[index] = b;
+    bitmapData[index + 1] = g;
+    bitmapData[index + 2] = r;
+
+    return 0; // No return values for the Lua function
 }
 
 int keyboard_down(lua_State *L)
