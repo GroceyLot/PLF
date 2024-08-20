@@ -37,6 +37,7 @@ int drawing_shader(lua_State *L);
 int drawing_rect(lua_State *L);
 int mouse_position(lua_State *L);
 int mouse_down(lua_State *L);
+int mouse_center(lua_State *L);
 int keyboard_down(lua_State *L);
 int window_title(lua_State *L);
 int window_close(lua_State *L);
@@ -84,6 +85,7 @@ void InitializeLua(const char *scriptPath)
         {"position", mouse_position},
         {"down", mouse_down},
         {"visible", mouse_visible},
+        {"center", mouse_center},
         {NULL, NULL}};
 
     luaL_newlib(L, mouseLib);
@@ -634,6 +636,26 @@ int drawing_shader(lua_State *L)
     return 0;
 }
 
+int mouse_center(lua_State *L)
+{
+    // Get the dimensions of the client area
+    RECT clientRect;
+    GetClientRect(hwndGlobal, &clientRect);
+
+    // Calculate the center position
+    int centerX = (clientRect.right - clientRect.left) / 2;
+    int centerY = (clientRect.bottom - clientRect.top) / 2;
+
+    // Convert the client coordinates to screen coordinates
+    POINT pt = {centerX, centerY};
+    ClientToScreen(hwndGlobal, &pt);
+
+    // Set the cursor position to the center of the window
+    SetCursorPos(pt.x, pt.y);
+
+    return 0; // No return values
+}
+
 int drawing_rect(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -791,28 +813,28 @@ int mouse_position(lua_State *L)
     float clientAspectRatio = (float)clientWidth / clientHeight;
 
     // Calculate the scaled mouse coordinates
-    int bufferX, bufferY;
+    float bufferX, bufferY;
 
     if (clientAspectRatio > bufferAspectRatio)
     {
         // Client area is wider than the buffer aspect ratio
-        int displayWidth = (int)(clientHeight * bufferAspectRatio);
-        int offsetX = (clientWidth - displayWidth) / 2;
-        bufferX = (int)((p.x - offsetX) / (float)displayWidth * bufferWidth);
-        bufferY = (int)(p.y / (float)clientHeight * bufferHeight);
+        float displayWidth = (float)(clientHeight * bufferAspectRatio);
+        float offsetX = (clientWidth - displayWidth) / 2;
+        bufferX = ((p.x - offsetX) / displayWidth) * bufferWidth;
+        bufferY = (p.y / (float)clientHeight) * bufferHeight;
     }
     else
     {
         // Client area is taller than the buffer aspect ratio
-        int displayHeight = (int)(clientWidth / bufferAspectRatio);
-        int offsetY = (clientHeight - displayHeight) / 2;
-        bufferX = (int)(p.x / (float)clientWidth * bufferWidth);
-        bufferY = (int)((p.y - offsetY) / (float)displayHeight * bufferHeight);
+        float displayHeight = (float)(clientWidth / bufferAspectRatio);
+        float offsetY = (clientHeight - displayHeight) / 2;
+        bufferX = (p.x / (float)clientWidth) * bufferWidth;
+        bufferY = ((p.y - offsetY) / displayHeight) * bufferHeight;
     }
 
     // Clamp the coordinates to the buffer dimensions
-    bufferX = max(0, min(bufferX, bufferWidth - 1));
-    bufferY = max(0, min(bufferY, bufferHeight - 1));
+    bufferX = max(0.0f, min(bufferX, (float)bufferWidth - 1));
+    bufferY = max(0.0f, min(bufferY, (float)bufferHeight - 1));
 
     // Check if the mouse position is within the valid buffer area
     if (bufferX < 0 || bufferX >= bufferWidth || bufferY < 0 || bufferY >= bufferHeight)
@@ -822,8 +844,8 @@ int mouse_position(lua_State *L)
     }
     else
     {
-        lua_pushinteger(L, bufferX);
-        lua_pushinteger(L, bufferY);
+        lua_pushnumber(L, bufferX);
+        lua_pushnumber(L, bufferY);
     }
     return 2;
 }
