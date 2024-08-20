@@ -5,7 +5,9 @@
 ## To install:
 
 1. Get the rom generator from [imagRom](https://github.com/GroceyLot/ImageROM/releases/tag/Release)
-2. Install plf via the release or the source
+2. Install plf via the actions artifact or by building the source
+  -  To build the source you need a C compiler, and cmake
+  -  Once you have those just run build.bat
 
 ## Usage:
 
