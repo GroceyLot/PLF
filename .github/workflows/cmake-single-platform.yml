@@ -16,4 +16,11 @@ jobs:
 
     - name: Build
       run: cmake --build build
+      
+    - name: Upload Executable
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: plf-executable
+        path: build\Debug\plf.exe
 
