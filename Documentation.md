@@ -45,9 +45,10 @@ texture.fromRom(id) -- Takes the texture from the rom with the id (id is a 4 let
 
 #### `mouse`:
 ```lua
-mouse.position() -- Returns mouse x and y as an integer based on the screen
+mouse.position() -- Returns mouse x and y as an float based on the screen
 mouse.down(button) -- Returns a boolean based on button (button is 1, 2 or 3)
 mouse.visible(visible) -- Changes the mouse visibility
+mouse.center() -- Centers the mouse
 ```
 
 #### `keyboard`:
@@ -73,6 +74,8 @@ util.clamp(value, min, max) -- Clamps a value
 util.random(max) -- Random number up to max
 util.random(min, max) -- Random number from min to max
 util.lerp(start, end, t) -- Lerps from start to end with time t
+util.httpGet(url) -- Returns code, body
+util.intersect(x1, y1, width1, height1, x2, y2, width2, height2)
 ```
 
 ### Required globals:
