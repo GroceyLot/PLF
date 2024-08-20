@@ -33,6 +33,9 @@ drawing.rect(image, x, y) -- Draws the image with top left corner at x, y
 drawing.shader(function(x, y)
   return color.rgb(math.random(0, 7), 0, 0)
 end) -- Draws the function to the full screen
+drawing.circle(x, y, radius, color)
+drawing.line(x1, y1, x2, y2, color)
+drawing.pixel(x, y, color)
 ```
 
 #### `texture`:
