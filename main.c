@@ -48,6 +48,7 @@ int util_distance(lua_State *L);
 int util_random(lua_State *L);
 int util_clamp(lua_State *L);
 int util_lerp(lua_State *L);
+int util_intersect(lua_State *L);
 
 void InitializeLua(const char *scriptPath)
 {
@@ -111,6 +112,7 @@ void InitializeLua(const char *scriptPath)
         {"lerp", util_lerp},
         {"random", util_random},
         {"httpGet", http_get},
+        {"intersect", util_intersect},
         {NULL, NULL}};
 
     luaL_newlib(L, utilLib);
@@ -118,7 +120,7 @@ void InitializeLua(const char *scriptPath)
 
     if (luaL_dofile(L, scriptPath))
     {
-        MessageBox(NULL, lua_tostring(L, -1), "Lua Error", MB_OK);
+        MessageBox(NULL, lua_tostring(L, -1), "Lua Error :\\", MB_OK);
         lua_close(L);
         L = NULL;
     }
@@ -142,13 +144,20 @@ void SetupBuffer(HDC hdc, int width, int height)
 
 void UpdatePixelsFromLua(double dt)
 {
-    lua_getglobal(L, "update"); // Get the "update" function from Lua
-    lua_pushnumber(L, dt);      // Push dt onto the Lua stack
-
-    if (lua_pcall(L, 1, 0, 0) != LUA_OK) // Call the update function with 1 argument
+    lua_getglobal(L, "update");
+    if (lua_isfunction(L, -1))
     {
-        MessageBox(NULL, lua_tostring(L, -1), "Error in Update", MB_OK);
-        lua_pop(L, 1); // Remove the error message from the stack
+        lua_pushnumber(L, dt);
+
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        {
+            MessageBox(NULL, lua_tostring(L, -1), "Error in Update :\\", MB_OK);
+            lua_pop(L, 1);
+        }
+    }
+    else
+    {
+        lua_pop(L, 1);
     }
 }
 
@@ -223,15 +232,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             if (!isFullscreen)
             {
-                // Save the current window position and size
                 GetWindowRect(hwnd, &windowRect);
 
-                // Get the dimensions of the primary monitor
                 HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY);
                 MONITORINFO monitorInfo = {sizeof(MONITORINFO)};
                 GetMonitorInfo(hMonitor, &monitorInfo);
 
-                // Set the window style to borderless and move it to cover the entire monitor
                 SetWindowLong(hwnd, GWL_STYLE, WS_POPUP);
                 SetWindowPos(hwnd, HWND_TOP, monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
                              monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
@@ -242,7 +248,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             else
             {
-                // Restore the window style and size
                 SetWindowLong(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
                 SetWindowPos(hwnd, HWND_TOP, windowRect.left, windowRect.top,
                              windowRect.right - windowRect.left, windowRect.bottom - windowRect.top,
@@ -250,75 +255,103 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                 isFullscreen = false;
             }
-            return 0; // Stop further processing of the key
+            return 0;
         }
         break;
 
     case WM_LBUTTONDOWN:
         lua_getglobal(L, "down");
-        lua_pushinteger(L, 1); // 1 for left mouse button
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        if (lua_isfunction(L, -1))
         {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Down", MB_OK);
+            lua_pushinteger(L, 1);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Down", MB_OK);
+            }
         }
+        lua_pop(L, 1);
         break;
 
     case WM_LBUTTONUP:
         lua_getglobal(L, "up");
-        lua_pushinteger(L, 1); // 1 for left mouse button
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        if (lua_isfunction(L, -1))
         {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Up", MB_OK);
+            lua_pushinteger(L, 1);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Up", MB_OK);
+            }
         }
+        lua_pop(L, 1);
         break;
 
     case WM_RBUTTONDOWN:
         lua_getglobal(L, "down");
-        lua_pushinteger(L, 2); // 2 for right mouse button
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        if (lua_isfunction(L, -1))
         {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Down", MB_OK);
+            lua_pushinteger(L, 2);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Down", MB_OK);
+            }
         }
+        lua_pop(L, 1);
         break;
 
     case WM_RBUTTONUP:
         lua_getglobal(L, "up");
-        lua_pushinteger(L, 2); // 2 for right mouse button
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        if (lua_isfunction(L, -1))
         {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Up", MB_OK);
+            lua_pushinteger(L, 2);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Up", MB_OK);
+            }
         }
+        lua_pop(L, 1);
         break;
 
     case WM_MBUTTONDOWN:
         lua_getglobal(L, "down");
-        lua_pushinteger(L, 3); // 3 for middle mouse button
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        if (lua_isfunction(L, -1))
         {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Down", MB_OK);
+            lua_pushinteger(L, 3);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Down", MB_OK);
+            }
         }
+        lua_pop(L, 1);
         break;
 
     case WM_MBUTTONUP:
         lua_getglobal(L, "up");
-        lua_pushinteger(L, 3); // 3 for middle mouse button
-        if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+        if (lua_isfunction(L, -1))
         {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Up", MB_OK);
+            lua_pushinteger(L, 3);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Mouse Up", MB_OK);
+            }
         }
+        lua_pop(L, 1);
         break;
 
     case WM_CLOSE:
         running = false;
+        lua_getglobal(L, "close");
+        if (lua_isfunction(L, -1))
+        {
+            if (lua_pcall(L, 0, 0, 0) != LUA_OK)
+            {
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Close :\\", MB_OK);
+            }
+        }
+        lua_pop(L, 1);
         WaitForSingleObject(updateThread, INFINITE);
         DestroyWindow(hwnd);
         return 0;
     case WM_DESTROY:
-        lua_getglobal(L, "close");
-        if (lua_pcall(L, 0, 0, 0) != LUA_OK)
-        {
-            MessageBox(NULL, lua_tostring(L, -1), "Error in Close", MB_OK);
-        }
         PostQuitMessage(0);
         return 0;
     case WM_PAINT:
@@ -347,7 +380,7 @@ int color_hsv(lua_State *L)
     int v = luaL_checkinteger(L, 3);
     if (h < 0 || h > 7 || s < 0 || s > 7 || v < 0 || v > 7)
     {
-        return luaL_error(L, "HSV values must be between 0 and 7");
+        return luaL_error(L, "HSV values must be between 0 and 7 :\\");
     }
 
     float hue = h / 7.0f * 360.0f;
@@ -405,7 +438,7 @@ int color_greyscale(lua_State *L)
     int color = luaL_checkinteger(L, 1);
     if (color < 1 || color > 512)
     {
-        return luaL_error(L, "Color must be between 1 and 512");
+        return luaL_error(L, "Color must be between 1 and 512 :\\");
     }
 
     int encodedValue = color - 1;
@@ -441,7 +474,7 @@ int texture_fromShader(lua_State *L)
             lua_pushinteger(L, y);
             if (lua_pcall(L, 2, 1, 0) != LUA_OK)
             {
-                MessageBox(NULL, lua_tostring(L, -1), "Error in Shader", MB_OK);
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Shader :\\", MB_OK);
                 return 0;
             }
             int value = lua_tointeger(L, -1);
@@ -463,7 +496,7 @@ int texture_fromRom(lua_State *L)
     FILE *file = fopen(romPathGlobal, "rb");
     if (!file)
     {
-        return luaL_error(L, "Failed to open ROM file: %s", romPathGlobal);
+        return luaL_error(L, "Failed to open ROM file: %s :\\", romPathGlobal);
     }
 
     // Read the header and validate
@@ -472,7 +505,7 @@ int texture_fromRom(lua_State *L)
     if (strncmp(header, "imag", 4) != 0)
     {
         fclose(file);
-        return luaL_error(L, "Invalid ROM file header");
+        return luaL_error(L, "Invalid ROM file header :\\");
     }
 
     // Read the number of images in the ROM
@@ -500,14 +533,14 @@ int texture_fromRom(lua_State *L)
             if (numPixels != width * height)
             {
                 fclose(file);
-                return luaL_error(L, "Image size does not match expected dimensions, possible corruption.");
+                return luaL_error(L, "Image size does not match expected dimensions, possible corruption :\\");
             }
 
             // Sanity check on numPixels
             if (numPixels > 1000000) // Check for realistic pixel count
             {
                 fclose(file);
-                return luaL_error(L, "Ridiculously large image, I am NOT opening that.");
+                return luaL_error(L, "Ridiculously large image, I am NOT opening that :\\");
             }
 
             // Allocate memory for pixels and read them
@@ -515,7 +548,7 @@ int texture_fromRom(lua_State *L)
             if (!pixels)
             {
                 fclose(file);
-                return luaL_error(L, "Failed to allocate memory for image data");
+                return luaL_error(L, "Failed to allocate memory for image data :\\");
             }
             fread(pixels, sizeof(unsigned short), numPixels, file);
             found = true;
@@ -532,7 +565,7 @@ int texture_fromRom(lua_State *L)
 
     if (!found)
     {
-        return luaL_error(L, "Image '%s' not found in ROM file", imageName);
+        return luaL_error(L, "Image '%s' not found in ROM file :\\", imageName);
     }
 
     // Create a Lua table to hold the texture
@@ -570,7 +603,7 @@ int drawing_shader(lua_State *L)
             lua_pushinteger(L, y);
             if (lua_pcall(L, 2, 1, 0) != LUA_OK)
             {
-                MessageBox(NULL, lua_tostring(L, -1), "Error in Shader", MB_OK);
+                MessageBox(NULL, lua_tostring(L, -1), "Error in Shader :\\", MB_OK);
                 return 0;
             }
             int value = lua_tointeger(L, -1);
@@ -811,7 +844,7 @@ int mouse_down(lua_State *L)
         vkButton = VK_MBUTTON;
         break;
     default:
-        return luaL_error(L, "Invalid button");
+        return luaL_error(L, "Invalid button :\\");
     }
     lua_pushboolean(L, GetAsyncKeyState(vkButton) & 0x8000);
     return 1;
@@ -912,6 +945,99 @@ int util_lerp(lua_State *L)
     return 1;
 }
 
+int util_intersect(lua_State *L)
+{
+    // Get input parameters
+    double x1 = luaL_checknumber(L, 1);
+    double y1 = luaL_checknumber(L, 2);
+    double width1 = luaL_checknumber(L, 3);
+    double height1 = luaL_checknumber(L, 4);
+    double x2 = luaL_checknumber(L, 5);
+    double y2 = luaL_checknumber(L, 6);
+    double width2 = luaL_checknumber(L, 7);
+    double height2 = luaL_checknumber(L, 8);
+
+    // Calculate the half-widths and half-heights
+    double halfWidth1 = width1 / 2.0;
+    double halfHeight1 = height1 / 2.0;
+    double halfWidth2 = width2 / 2.0;
+    double halfHeight2 = height2 / 2.0;
+
+    // Calculate the centers of the rectangles
+    double centerX1 = x1 + halfWidth1;
+    double centerY1 = y1 + halfHeight1;
+    double centerX2 = x2 + halfWidth2;
+    double centerY2 = y2 + halfHeight2;
+
+    // Calculate the differences in centers
+    double deltaX = centerX2 - centerX1;
+    double deltaY = centerY2 - centerY1;
+
+    // Calculate the combined half-widths and half-heights
+    double combinedHalfWidth = halfWidth1 + halfWidth2;
+    double combinedHalfHeight = halfHeight1 + halfHeight2;
+
+    // Check for collision
+    if (fabs(deltaX) < combinedHalfWidth && fabs(deltaY) < combinedHalfHeight)
+    {
+        // Collision detected, calculate the overlaps
+        double overlapX = combinedHalfWidth - fabs(deltaX);
+        double overlapY = combinedHalfHeight - fabs(deltaY);
+
+        // Determine the minimal movement needed to resolve the collision
+        if (overlapX < overlapY)
+        {
+            // Resolve collision in X direction
+            if (deltaX > 0)
+            {
+                // Move rect2 to the right
+                lua_pushnumber(L, overlapX);  // x1 movement
+                lua_pushnumber(L, 0);         // y1 movement
+                lua_pushnumber(L, -overlapX); // x2 movement
+                lua_pushnumber(L, 0);         // y2 movement
+            }
+            else
+            {
+                // Move rect2 to the left
+                lua_pushnumber(L, -overlapX); // x1 movement
+                lua_pushnumber(L, 0);         // y1 movement
+                lua_pushnumber(L, overlapX);  // x2 movement
+                lua_pushnumber(L, 0);         // y2 movement
+            }
+        }
+        else
+        {
+            // Resolve collision in Y direction
+            if (deltaY > 0)
+            {
+                // Move rect2 down
+                lua_pushnumber(L, 0);         // x1 movement
+                lua_pushnumber(L, overlapY);  // y1 movement
+                lua_pushnumber(L, 0);         // x2 movement
+                lua_pushnumber(L, -overlapY); // y2 movement
+            }
+            else
+            {
+                // Move rect2 up
+                lua_pushnumber(L, 0);         // x1 movement
+                lua_pushnumber(L, -overlapY); // y1 movement
+                lua_pushnumber(L, 0);         // x2 movement
+                lua_pushnumber(L, overlapY);  // y2 movement
+            }
+        }
+        return 4; // Return 4 values (movements)
+    }
+    else
+    {
+        // No collision
+        lua_pushnumber(L, 0); // x1 movement
+        lua_pushnumber(L, 0); // y1 movement
+        lua_pushnumber(L, 0); // x2 movement
+        lua_pushnumber(L, 0); // y2 movement
+        return 4;             // Return 4 values (all zeros)
+    }
+}
+
 int keyboard_down(lua_State *L)
 {
     const char *key = luaL_checkstring(L, 1);
@@ -949,7 +1075,7 @@ int keyboard_down(lua_State *L)
             vkey = VK_DOWN;
         // Add more VK_ mappings as needed
         else
-            return luaL_error(L, "Unrecognized key: %s", key);
+            return luaL_error(L, "Unrecognized key: %s :\\", key);
     }
 
     lua_pushboolean(L, GetAsyncKeyState(vkey) & 0x8000);
@@ -985,13 +1111,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     if (hwnd == NULL)
     {
-        MessageBox(NULL, "HWND is null", "Error", MB_OK);
+        MessageBox(NULL, "HWND is null", "Error :\\", MB_OK);
         return 0;
     }
 
     if (__argc < 3) // Expecting at least two command line arguments
     {
-        MessageBox(NULL, "Usage: <program> <script_path> <rom_path>", "Error", MB_OK);
+        MessageBox(NULL, "Usage: <program> <script_path> <rom_path>", "Error :\\", MB_OK);
         return 0;
     }
 
@@ -1012,7 +1138,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     lua_getglobal(L, "width");
     if (!lua_isinteger(L, -1))
     {
-        MessageBox(NULL, "Expected integer for 'width'", "Error", MB_OK);
+        MessageBox(NULL, "Expected integer for 'width'", "Error :\\", MB_OK);
         lua_close(L);
         return 0;
     }
@@ -1022,7 +1148,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     lua_getglobal(L, "height");
     if (!lua_isinteger(L, -1))
     {
-        MessageBox(NULL, "Expected integer for 'height'", "Error", MB_OK);
+        MessageBox(NULL, "Expected integer for 'height'", "Error :\\", MB_OK);
         lua_close(L);
         return 0;
     }
@@ -1032,7 +1158,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     lua_getglobal(L, "dt");
     if (!lua_isnumber(L, -1))
     {
-        MessageBox(NULL, "Expected number for 'dt'", "Error", MB_OK);
+        MessageBox(NULL, "Expected number for 'dt'", "Error :\\", MB_OK);
         lua_close(L);
         return 0;
     }
@@ -1040,22 +1166,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     lua_pop(L, 1);
 
     lua_getglobal(L, "title");
-    if (!lua_isstring(L, -1))
+    if (lua_isstring(L, -1))
     {
-        MessageBox(NULL, "Expected string for 'title'", "Error", MB_OK);
-        lua_close(L);
-        return 0;
+        SetWindowText(hwnd, lua_tostring(L, -1));
     }
-    SetWindowText(hwnd, lua_tostring(L, -1));
     lua_pop(L, 1);
 
     lua_getglobal(L, "load");
-    if (lua_pcall(L, 0, 0, 0) != LUA_OK)
+    if (lua_isfunction(L, -1))
     {
-        MessageBox(NULL, lua_tostring(L, -1), "Error in Load", MB_OK);
-        lua_close(L);
-        return 0;
+        if (lua_pcall(L, 0, 0, 0) != LUA_OK)
+        {
+            MessageBox(NULL, lua_tostring(L, -1), "Error in Load :\\", MB_OK);
+            lua_close(L);
+            return 0;
+        }
     }
+    lua_pop(L, 1);
 
     SetupBuffer(hdc, bufferWidth, bufferHeight);
     ReleaseDC(hwnd, hdc);
