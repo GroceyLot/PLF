@@ -23,4 +23,3 @@ jobs:
       with:
         name: plf-executable
         path: build\Debug\plf.exe
-
