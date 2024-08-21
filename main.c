@@ -47,6 +47,7 @@ int mouse_visible(lua_State *L);
 int window_fullscreen(lua_State *L);
 int window_message(lua_State *L);
 int http_get(lua_State *L);
+int drawing_pixel(lua_State *L);
 int util_distance(lua_State *L);
 int util_random(lua_State *L);
 int util_clamp(lua_State *L);
@@ -72,6 +73,7 @@ void InitializeLua(const char *scriptPath)
         {"rect", drawing_rect},
         {"circle", drawing_circle},
         {"line", drawing_line},
+        {"pixel", drawing_pixel},
         {NULL, NULL}};
 
     luaL_newlib(L, drawingLib);
