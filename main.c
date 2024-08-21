@@ -11,7 +11,9 @@
 
 // Global variables
 HDC hdcMem = NULL;
+HDC hdcBuffer = NULL; // Additional buffer for double buffering
 HBITMAP hBitmap = NULL;
+HBITMAP hbmBuffer = NULL; // Bitmap for the additional buffer
 BYTE *bitmapData = NULL;
 lua_State *L = NULL;
 HWND hwndGlobal = NULL;
@@ -148,6 +150,11 @@ void SetupBuffer(HDC hdc, int width, int height)
     hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, (void **)&bitmapData, NULL, 0);
     hdcMem = CreateCompatibleDC(hdc);
     SelectObject(hdcMem, hBitmap);
+
+    // Setup the additional buffer for double buffering
+    hdcBuffer = CreateCompatibleDC(hdc);
+    hbmBuffer = CreateCompatibleBitmap(hdc, width, height);
+    SelectObject(hdcBuffer, hbmBuffer);
 }
 
 void UpdatePixelsFromLua(double dt)
@@ -199,14 +206,6 @@ void DrawBuffer(HWND hwnd)
     RECT rect;
     GetClientRect(hwnd, &rect);
 
-    HDC hdcBuffer = CreateCompatibleDC(hdc); // Create a memory DC
-    HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-    HBITMAP hbmOld = (HBITMAP)SelectObject(hdcBuffer, hbmBuffer); // Select the buffer bitmap
-
-    // Fill the window with black color
-    HBRUSH blackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    FillRect(hdcBuffer, &rect, blackBrush);
-
     // Calculate the aspect ratio of the buffer and the window
     float bufferAspectRatio = (float)bufferWidth / bufferHeight;
     float windowAspectRatio = (float)(rect.right - rect.left) / (rect.bottom - rect.top);
@@ -227,15 +226,26 @@ void DrawBuffer(HWND hwnd)
         offsetY = (rect.bottom - rect.top - drawHeight) / 2;
     }
 
-    SetStretchBltMode(hdcBuffer, STRETCH_ANDSCANS);
-    StretchBlt(hdcBuffer, offsetX, offsetY, drawWidth, drawHeight, hdcMem, 0, 0, bufferWidth, bufferHeight, SRCCOPY);
+    // Create a compatible memory DC to use as a back buffer
+    HDC hdcBackBuffer = CreateCompatibleDC(hdc);
+    HBITMAP hbmBackBuffer = CreateCompatibleBitmap(hdc, rect.right - rect.left, rect.bottom - rect.top);
+    HBITMAP hbmOld = (HBITMAP)SelectObject(hdcBackBuffer, hbmBackBuffer);
 
-    // Copy the memory buffer to the actual window
-    BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcBuffer, 0, 0, SRCCOPY);
+    // Clear the back buffer
+    HBRUSH blackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    FillRect(hdcBackBuffer, &rect, blackBrush);
 
-    SelectObject(hdcBuffer, hbmOld); // Restore the old bitmap
-    DeleteObject(hbmBuffer);         // Clean up the buffer bitmap
-    DeleteDC(hdcBuffer);             // Delete the memory DC
+    // Draw the buffer onto the back buffer
+    SetStretchBltMode(hdcBackBuffer, HALFTONE);
+    StretchBlt(hdcBackBuffer, offsetX, offsetY, drawWidth, drawHeight, hdcMem, 0, 0, bufferWidth, bufferHeight, SRCCOPY);
+
+    // Copy the back buffer to the window
+    BitBlt(hdc, 0, 0, rect.right - rect.left, rect.bottom - rect.top, hdcBackBuffer, 0, 0, SRCCOPY);
+
+    // Clean up
+    SelectObject(hdcBackBuffer, hbmOld);
+    DeleteObject(hbmBackBuffer);
+    DeleteDC(hdcBackBuffer);
 
     EndPaint(hwnd, &ps);
 }
@@ -1362,6 +1372,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     DeleteObject(hBitmap);
     DeleteDC(hdcMem);
+    DeleteObject(hbmBuffer); // Cleanup buffer
+    DeleteDC(hdcBuffer);     // Cleanup buffer DC
     lua_close(L);
 
     return (int)msg.wParam;
