@@ -236,7 +236,7 @@ void DrawBuffer(HWND hwnd)
     FillRect(hdcBackBuffer, &rect, blackBrush);
 
     // Draw the buffer onto the back buffer
-    SetStretchBltMode(hdcBackBuffer, HALFTONE);
+    SetStretchBltMode(hdcBackBuffer, STRETCH_ANDSCANS);
     StretchBlt(hdcBackBuffer, offsetX, offsetY, drawWidth, drawHeight, hdcMem, 0, 0, bufferWidth, bufferHeight, SRCCOPY);
 
     // Copy the back buffer to the window
