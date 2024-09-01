@@ -13,8 +13,8 @@
 
 plf <script_path> <rom_path>
 
-imagRom <action : (encode, decode)>
-  encode - <images_folder_path> <rom_path>
+imagRom <action : (encode, decode)> <br>
+  encode - <images_folder_path> <rom_path> <br>
   decode - <rom_path> <images_folder_path>
 
 ## Documentation:
