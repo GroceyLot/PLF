@@ -12,6 +12,7 @@
 ## Usage:
 
 plf <script_path> <rom_path>
+
 imagRom <action : (encode, decode)>
   encode - <images_folder_path> <rom_path>
   decode - <rom_path> <images_folder_path>
