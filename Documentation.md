@@ -80,18 +80,18 @@ util.httpGet(url) -- Returns code, body TODO: implement this
 util.intersect(x1, y1, width1, height1, x2, y2, width2, height2)
 ```
 
-### Required globals:
+### set globals:
 ```lua
 width = 320
 height = 180
 title = "Window title"
-dt = 16 -- Target update ms
+fps = 60 -- Target framerate
+suppress = true -- Suppress error messages in the console
+noConsole = true -- Delete the console (ignores suppress if true)
 
-function load() end
 function update(dt) end -- Dt in seconds
-function down(button) end
-function up(button) end
-function close() end
+function mouseDown(button) end
+function mouseUp(button) end
 ```
 
 ### Extra:
