@@ -10,4 +10,4 @@ An easy primitive game/app framework using Lua for scripting.
 ### New:
 - Download the project as a zip
 - Modify CMakeLists.txt to have paths to LuaJIT and SDL2
-- `cmake .`, `cmake -B .`
+- `cmake .`, `cmake -B .` or if on windows run the build.bat
