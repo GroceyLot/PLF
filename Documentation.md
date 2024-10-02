@@ -1,17 +1,15 @@
 # PLF documentation
 
-**This is windows only, if you want to run it on something else then you can write a port**
-
 ## To install:
 
 1. Get the rom generator from [imagRom](https://github.com/GroceyLot/ImageROM/releases/tag/Release)
-2. Install plf via the actions artifact or by building the source
-  -  To build the source you need a C compiler, and cmake
-  -  Once you have those just run build.bat
+2. To install PLF I put it in readme
 
 ## Usage:
 
-plf <script_path> <rom_path>
+plf [script_path] [rom_path]
+
+If either are not provided it will default to main.lua and rom.rom. I hope that you can use this to package your games so people don't have to run a sketchy batch file.
 
 imagRom <action : (encode, decode)> <br>
   encode - <images_folder_path> <rom_path> <br>
@@ -78,7 +76,7 @@ util.clamp(value, min, max) -- Clamps a value
 util.random(max) -- Random number up to max
 util.random(min, max) -- Random number from min to max
 util.lerp(start, end, t) -- Lerps from start to end with time t
-util.httpGet(url) -- Returns code, body
+util.httpGet(url) -- Returns code, body TODO: implement this
 util.intersect(x1, y1, width1, height1, x2, y2, width2, height2)
 ```
 
