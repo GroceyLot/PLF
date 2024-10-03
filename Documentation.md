@@ -89,7 +89,7 @@ fps = 60 -- Target framerate
 suppress = true -- Suppress error messages in the console
 noConsole = true -- Delete the console (ignores suppress if true)
 
-function update(dt) end -- Dt in seconds
+function update(dt) end -- Dt in seconds, should not be used for accurate timing
 function mouseDown(button) end
 function mouseUp(button) end
 ```
